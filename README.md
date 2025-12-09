@@ -1,178 +1,208 @@
 # Emergent Factorization
 
-**Testing whether neural networks discover factorized representations under architectural and informational pressure.**
+**Compositional generalization requires compositional structure end-to-end: Evidence from factorial learning in neural networks.**
 
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Key Finding
+---
 
-**Compositional generalization requires compositional structure END-TO-END.**
+## Key Finding: The End-to-End Compositionality Principle
 
-| Input Structure | Output Structure | Compositional Generalization |
-|-----------------|------------------|------------------------------|
-| Holistic | Non-compositional | **0%** |
-| Factorized | Non-compositional | **0%** |
-| Factorized | Compositional | **80% ± 6.7%** |
+Compositional generalization requires **four conjunctively necessary conditions**:
 
-**Effect size: Cohen's d = 11.95**
+1. **Factorized input** (recombination exposure)
+2. **Compositional output** (factor-level prediction)
+3. **Sufficient compression ratio** (combinations >> outputs)
+4. **Balanced factor cardinalities** (asymmetry ratio < ~2.5)
 
-![Main Results](results/main_results.png)
+Violating any one yields degraded or failed generalization. Simple compensation strategies (oversampling, loss reweighting) do not overcome violated conditions.
 
-## The Discovery
+---
 
-We set out to test whether capacity pressure alone could induce factorized representations in neural networks. The answer was *no*—but the investigation revealed something more important:
+## Main Results
 
-> **Output structure acts as an inductive bias that constrains the solution space.**
->
-> Non-compositional output (100-way classification over combinations) permits memorization.
-> Compositional output (separate factor predictions) FORCES compositional solutions.
+### Conjunctive Necessity (Experiments 1-5)
 
-This refines the Abstraction Primitive Hypothesis (APH): the conditions for compositional abstraction apply to the **entire processing pipeline**, not just representation learning.
+|                    | Non-Compositional Output | Compositional Output |
+|--------------------|--------------------------|----------------------|
+| **Holistic Input**     | 0.0% ± 0.0%              | 0.4% ± 1.2%          |
+| **Factorized Input**   | 0.0% ± 0.0%              | **72.4% ± 12.7%**    |
 
-## Theoretical Background
+- **Interaction effect: 0.720** (twice either main effect)
+- **Cohen's d = 11.95** (compositional vs non-compositional output)
 
-This repository tests predictions from the **Abstraction Primitive Hypothesis** (APH):
+### Scaling (Experiments 6-7)
 
-> **Hypothesis**: Compression yields abstraction (factorized, compositional representations) when specific conditions are met: factorization pressure, recombination exposure, compositional bottlenecks, and multi-task learning.
+| Factors | Combinations | Compression Ratio | Generalization |
+|---------|--------------|-------------------|----------------|
+| 2 | 16 | 2.0× | 20% |
+| 3 | 64 | 5.3× | 91% |
+| 4 | 256 | 16× | **100%** |
+| 5 | 1024 | 51× | **100%** |
 
-*Source: Danan (2025), "Abstraction Beyond Compression", Section 9.2*
+**Finding:** Higher compression ratios strengthen the compositional inductive bias.
 
-### Key References
+### Factor Balance Boundary (Experiment 8)
 
-- Compositional generalization failures in neural networks: Lake & Baroni (2018), ICML
-- Disentanglement requires inductive biases: Locatello et al. (2019), ICML  
-- Information bottleneck: Tishby et al. (2000)
-- Systematicity and compositionality: Fodor & Pylyshyn (1988)
+| Asymmetry Ratio | Performance | Status |
+|-----------------|-------------|--------|
+| 1.0 | 80% | ✓ Reliable |
+| 1.5 | 65% | ✓ Reliable |
+| 2.0 | 62% | ✓ Reliable |
+| **2.5-2.8** | **~50%** | **Boundary** |
+| 4.0 | 30% | ✗ Degraded |
+| 6.25 | 5% | ✗ Severe |
+| 11.0 | 0% | ✗ Failed |
 
-## Experiments
+**Finding:** Boundary for reliable generalization lies at asymmetry ratio ~2.5.
 
-### Experiment 1-2: Capacity and Multi-Task Pressure (Null Results)
+### Asymmetry vs Compression Trade-off (Experiment 9)
 
-**Question**: Does bottleneck size or multi-task learning induce factorization?
+Both effects are substantial and nearly equal:
+- **Asymmetry effect:** 49.6 percentage points
+- **Compression effect:** 46.2 percentage points
 
-**Result**: 0% compositional generalization regardless of bottleneck size or training objective.
+**Key finding:** Asymmetry can be partially compensated by compression. [10,40] achieves 77% despite ratio 4.0.
 
-**Diagnosis**: The input representation (one-hot over combinations) provided no recombination signal.
+### Compensation Strategies Fail (Experiment 10)
 
-### Experiment 3: Input Structure (Null Result)
+| Strategy | Performance | Change |
+|----------|-------------|--------|
+| Baseline | 30.4% | — |
+| Oversample 2× | 21.6% | -8.8% |
+| Oversample 4× | 20.0% | -10.4% |
+| Balanced loss | **0.8%** | **-29.6%** |
 
-**Question**: Does factorized input representation enable generalization?
+**Finding:** All compensation strategies make things worse. The constraint is fundamental, not a training artifact.
 
-**Result**: 0% compositional generalization despite factorized inputs.
+### Noise Robustness (Experiment 11)
 
-**Diagnosis**: The output structure (100-way combination classification) was non-compositional.
+- **Input noise:** Robust to std ≤ 0.2
+- **Label noise:** Robust to prob ≤ 0.3; 5% noise may help (regularization)
 
-**Key Observation**: Factor 2 was ~93% decodable from the bottleneck! The network *learned* factorized representations but couldn't use them because the output structure didn't permit composition.
+### Architecture Comparison (Experiment 12)
 
-### Experiment 4: Compositional Output (KEY RESULT)
+| Architecture | Performance |
+|--------------|-------------|
+| Transformer | 92.0% ± 4.4% |
+| MLP | 80.0% ± 6.7% |
+| RNN | 40.8% ± 14.8% |
 
-**Question**: Does compositional output structure enable generalization?
+- Transformer vs MLP: **t(6.9) = 3.35, p = 0.013, Cohen's d = 2.12**
+- Attention mechanisms enhance compositional processing
+- Sequential processing (RNN) hinders it
 
-**Result**: **80% ± 6.7% compositional generalization** (Cohen's d = 11.95)
+---
 
-**Design**: 
-- Input: Factorized (concatenated factor one-hots)
-- Output: Compositional (separate factor prediction heads)
-- Test: Both factors correct on novel combinations
+## Quantified Boundary Conditions
 
-### Bottleneck Sweep Results
+| Condition | Threshold | Evidence |
+|-----------|-----------|----------|
+| Compression ratio | >5× for reliable | Scaling experiment |
+| Asymmetry ratio | <2.5 for reliable | Boundary sweep |
+| Interaction | Both can compensate | Matched controls |
 
-| Bottleneck | Test Accuracy | Notes |
-|------------|---------------|-------|
-| 5 | 31.2% ± 11.7% | Underfitting |
-| 10 | 51.2% ± 8.2% | Constrained |
-| 15 | 72.8% ± 3.9% | Near threshold |
-| **20** | **80.0% ± 6.7%** | **At threshold (10+10)** |
-| 25 | 74.4% ± 13.5% | High variance |
-| 30 | 67.2% ± 15.7% | High variance |
-| 50 | 84.8% ± 12.0% | Excess capacity |
-
-**Notable**: Unlike non-compositional output, we do NOT see degradation at high bottleneck sizes. Compositional output structure prevents memorization strategies.
+---
 
 ## Theoretical Implications
 
-### Refinement of APH Section 9.2
+### For AI/ML
+Task structure may be as important as architecture. Decompose prediction objectives into compositional sub-objectives.
 
-**Original conditions** for compositional abstraction:
-1. Factorization pressure
-2. Recombination exposure  
-3. Compositional bottleneck
-4. Multi-task learning
+### For Disentanglement
+Disentangled representations (93% factor decodability) are **necessary but not sufficient**—compositional output structure is required.
 
-**Refined understanding**: These conditions apply to the **entire processing pipeline**:
+### For Cognitive Science
+Human compositional cognition may depend not just on compositional representations but on compositional *goals*.
 
-> **End-to-End Compositionality Principle**: Compositional generalization requires compositional structure at input (recombination exposure), representation (factorization pressure), AND output (compositional prediction structure).
+---
 
-### Why Output Structure Matters
+## Repository Structure
 
-With non-compositional output (combination classification):
-- The decoder maps bottleneck → arbitrary combination index
-- Novel combinations have no decoder pathway
-- Even perfect factor representations cannot generalize
+```
+emergent-factorization/
+├── src/
+│   ├── data.py                           # Holistic input dataset
+│   ├── data_factorized.py                # Factorized input dataset
+│   ├── models.py                         # Network architectures
+│   ├── experiment_bottleneck.py          # Exp 1: Capacity pressure
+│   ├── experiment_multitask.py           # Exp 2: Multi-task pressure
+│   ├── experiment_input_structure.py     # Exp 3: Input structure
+│   ├── experiment_compositional_output.py # Exp 4: Output structure (KEY)
+│   ├── experiment_holistic_compositional.py # Exp 5: Full factorial
+│   ├── experiment_three_factors.py       # Exp 6: 3-factor scaling
+│   ├── experiment_extended.py            # Exp 7-12: Extended suite
+│   ├── experiment_asymmetry_boundary.py  # Asymmetry deep-dive
+│   ├── analysis.py                       # Representation analysis
+│   ├── visualize.py                      # Core figures
+│   ├── visualize_extended.py             # Extended figures
+│   ├── utils.py                          # Utilities
+│   └── run_all.py                        # Main entry point
+├── results/                              # Experiment outputs
+├── paper_draft_v3.md                     # Paper manuscript
+├── requirements.txt
+└── README.md
+```
 
-With compositional output (factor prediction):
-- The decoder maps bottleneck → factor 1 AND bottleneck → factor 2
-- Novel combinations use the SAME factor decoders
-- Compositional structure is preserved end-to-end
+---
 
 ## Usage
+
 ```bash
 # Setup
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 
-# Run main experiment (Experiment 4)
+# Run core experiments
 python3 -m src.run_all
+
+# Run extended experiments
+python3 -m src.experiment_extended
+
+# Run asymmetry boundary investigation
+python3 -m src.experiment_asymmetry_boundary
 
 # Generate figures
 python3 -m src.visualize
-
-# Run specific experiments
-python3 -m src.experiment_compositional_output
-python3 -m src.experiment_input_structure
-python3 -m src.experiment_bottleneck
+python3 -m src.visualize_extended
 ```
 
-## Project Structure
+---
+
+## Key References
+
+- Lake & Baroni (2018). Generalization without systematicity. *ICML*.
+- Locatello et al. (2019). Challenging common assumptions in disentanglement. *ICML*.
+- Fodor & Pylyshyn (1988). Connectionism and cognitive architecture. *Cognition*.
+- Keysers et al. (2020). Measuring compositional generalization. *ICLR*.
+
+---
+
+## Citation
+
+```bibtex
+@misc{danan2025emergent,
+  author = {Danan, Hillary},
+  title = {Emergent Factorization: Compositional Generalization 
+           Requires End-to-End Compositional Structure},
+  year = {2025},
+  publisher = {GitHub},
+  url = {https://github.com/HillaryDanan/emergent-factorization}
+}
 ```
-emergent-factorization/
-├── src/
-│   ├── data.py                      # Holistic input dataset
-│   ├── data_factorized.py           # Factorized input dataset
-│   ├── models.py                    # Network architectures
-│   ├── experiment_bottleneck.py     # Exp 1: Capacity pressure
-│   ├── experiment_multitask.py      # Exp 2: Multi-task pressure
-│   ├── experiment_input_structure.py # Exp 3: Input structure
-│   ├── experiment_compositional_output.py # Exp 4: Output structure
-│   ├── analysis.py                  # Representation analysis
-│   ├── visualize.py                 # Figure generation
-│   ├── utils.py                     # Utilities
-│   └── run_all.py                   # Main entry point
-├── results/                         # Experiment outputs
-├── requirements.txt
-└── README.md
-```
 
-## Remaining Questions
-
-1. **Holistic input + compositional output**: Does output structure alone enable generalization? (Experiment 5, in progress)
-
-2. **3+ factors**: Does this scale to more complex factorial structures?
-
-3. **Learned compositional structure**: Can networks learn to impose compositional output?
-
-4. **Connection to language**: How does this relate to compositional semantics?
+---
 
 ## Author
 
 **Hillary Danan, PhD**  
 Cognitive Neuroscience
 
-## Related Work
+Part of the [Abstraction-Intelligence](https://github.com/HillaryDanan/abstraction-intelligence) theoretical framework.
 
-This is part of the [Abstraction-Intelligence](https://github.com/HillaryDanan/Abstraction-Intelligence) theoretical framework.
+---
 
 ## License
 
