@@ -4,7 +4,7 @@
 
 ¹ Independent Researcher, Cognitive Neuroscience
 
-*Correspondence: [email]
+*Correspondence: hillarydanan@gmail.com
 
 ---
 
